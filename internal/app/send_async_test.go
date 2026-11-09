@@ -72,6 +72,44 @@ func TestSendDoesNotBlockOtherRequests(t *testing.T) {
 	}
 }
 
+func TestSendUsesEnvironmentHeadersAndRequestOverrides(t *testing.T) {
+	var received http.Header
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received = r.Header.Clone()
+	}))
+	defer server.Close()
+
+	a := testApp(t)
+	a.current().url = server.URL
+	a.current().bodyType = "none"
+	env := a.store.Environment("env-1")
+	env.Vars = append(env.Vars, savedRow{Enabled: true, Key: "session", Value: "shared"})
+	env.Headers = []savedRow{
+		{Enabled: true, Key: "Cookie", Value: "sid={{session}}"},
+		{Enabled: true, Key: "X-Default", Value: "environment"},
+		{Enabled: true, Key: "X-Override", Value: "environment"},
+		{Enabled: false, Key: "X-Disabled", Value: "ignored"},
+	}
+	a.current().headers.Rows = rowsFromSaved([]savedRow{
+		{Enabled: true, Key: "X-Override", Value: "request"},
+	})
+
+	a.send(nil)
+
+	if got := received.Get("Cookie"); got != "sid=shared" {
+		t.Errorf("Cookie = %q, want the environment value with its variable resolved", got)
+	}
+	if got := received.Get("X-Default"); got != "environment" {
+		t.Errorf("X-Default = %q, want the environment fallback", got)
+	}
+	if got := received.Get("X-Override"); got != "request" {
+		t.Errorf("X-Override = %q, want the request-level value to take precedence", got)
+	}
+	if got := received.Get("X-Disabled"); got != "" {
+		t.Errorf("X-Disabled = %q, want the disabled environment header omitted", got)
+	}
+}
+
 // waitForApply runs the work the window would run for a finished response.
 func waitForApply(t *testing.T, pending <-chan func()) {
 	t.Helper()

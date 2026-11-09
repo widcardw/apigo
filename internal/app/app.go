@@ -278,6 +278,7 @@ type app struct {
 	envID            string
 	envName          string
 	envVars          widgets.State
+	envHeaders       widgets.State
 	// envBaseURL is the prefix URL of the environment being edited, which the
 	// manager shows on its own rather than as one of the rows.
 	envBaseURL string
@@ -1055,19 +1056,20 @@ func (a *app) openEnvManager() {
 	a.editEnvironment(id)
 }
 
-// editEnvironment loads an environment's variables for editing: its prefix URL
-// on its own, and the rows beside it.
+// editEnvironment loads an environment's variables and shared headers for
+// editing: its prefix URL on its own, and the rows beside it.
 func (a *app) editEnvironment(id string) {
 	a.envID = id
 	env := a.store.Environment(id)
 	if env == nil {
-		a.envName, a.envVars, a.envBaseURL = "", widgets.State{}, ""
+		a.envName, a.envVars, a.envHeaders, a.envBaseURL = "", widgets.State{}, widgets.State{}, ""
 		return
 	}
 	a.envName = env.Name
 	prefix, rows := baseURLOf(env.Vars)
 	a.envBaseURL = prefix
 	a.envVars = widgets.State{Rows: rowsFromSaved(rows), Compact: true}
+	a.envHeaders = widgets.State{Rows: rowsFromSaved(env.Headers)}
 }
 
 // saveEnvEdits keeps what the environment manager changed: the variables of
@@ -1076,6 +1078,7 @@ func (a *app) editEnvironment(id string) {
 func (a *app) saveEnvEdits(c *ui.Context) {
 	if env := a.store.Environment(a.envID); env != nil {
 		env.Vars = withBaseURL(a.envBaseURL, rowsToSaved(a.envVars.Rows))
+		env.Headers = rowsToSaved(a.envHeaders.Rows)
 	}
 	if err := a.store.SaveEnvironments(); err != nil {
 		c.Toast("保存环境失败：" + err.Error())
@@ -1238,7 +1241,15 @@ func (a *app) send(c *ui.Context) {
 		return
 	}
 	params, missingParams := req.ResolveRows(paramRows(t.params.Enabled()), vars)
-	headers, missingHeaders := req.ResolveRows(t.headers.Enabled(), vars)
+	var headers []widgets.Row
+	var missingEnvHeaders []string
+	if env := a.activeEnvironment(); env != nil {
+		envRows := (&widgets.State{Rows: rowsFromSaved(env.Headers)}).Enabled()
+		headers, missingEnvHeaders = req.ResolveRows(envRows, vars)
+	}
+	requestHeaders, missingRequestHeaders := req.ResolveRows(t.headers.Enabled(), vars)
+	headers = append(headers, requestHeaders...)
+	missingHeaders := append(missingEnvHeaders, missingRequestHeaders...)
 	form, missingForm := req.ResolveRows(t.form.Enabled(), vars)
 	body, missingBody := req.ResolveVars(t.body.String(), vars)
 	missing = req.Dedupe(append(append(append(append(append(missing, missingValues...),

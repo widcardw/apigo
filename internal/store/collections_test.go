@@ -148,6 +148,7 @@ func TestStoreRoundTrip(t *testing.T) {
 		t.Fatal("a new collection has no active environment")
 	}
 	env.Vars = []Row{{Enabled: true, Key: BaseURLVariable, Value: "http://localhost:8080"}}
+	env.Headers = []Row{{Enabled: true, Key: "Cookie", Value: "session=shared"}}
 	if err := s.SaveEnvironments(); err != nil {
 		t.Fatal(err)
 	}
@@ -177,6 +178,10 @@ func TestStoreRoundTrip(t *testing.T) {
 	active := loaded.ActiveEnvironment(saved.ID)
 	if active == nil || active.Vars[0].Value != "http://localhost:8080" {
 		t.Errorf("active environment %+v, want the saved BaseURL", active)
+	}
+	if active == nil || len(active.Headers) != 1 ||
+		active.Headers[0] != (Row{Enabled: true, Key: "Cookie", Value: "session=shared"}) {
+		t.Errorf("active environment headers %+v, want the saved Cookie header", active)
 	}
 }
 

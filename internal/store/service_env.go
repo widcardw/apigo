@@ -14,11 +14,12 @@ const scopeGlobal = "global"
 // collection. A collection keeps its own in <集合>/.env/<环境>.yaml; the
 // global ones stay in one file of the data directory.
 type Environment struct {
-	ID     string `yaml:"id"`
-	Name   string `yaml:"name"`
-	Scope  string `yaml:"-"`
-	Active bool   `yaml:"active,omitempty"`
-	Vars   []Row  `yaml:"variables,omitempty"`
+	ID      string `yaml:"id"`
+	Name    string `yaml:"name"`
+	Scope   string `yaml:"-"`
+	Active  bool   `yaml:"active,omitempty"`
+	Vars    []Row  `yaml:"variables,omitempty"`
+	Headers []Row  `yaml:"headers,omitempty"`
 }
 
 // envDir is the directory a scope keeps its environments in.
@@ -324,6 +325,7 @@ func (s *Store) CloneEnvironments() []Environment {
 	for i, env := range s.Environments {
 		out[i] = env
 		out[i].Vars = append([]Row(nil), env.Vars...)
+		out[i].Headers = append([]Row(nil), env.Headers...)
 	}
 	return out
 }

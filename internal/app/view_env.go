@@ -11,8 +11,8 @@ import (
 )
 
 // envModal manages the environments of the active collection: the list of them
-// on the left, the variables of the one being edited on the right, and the
-// buttons that keep or drop what it changed.
+// on the left, the variables and shared headers of the one being edited on the
+// right, and the buttons that keep or drop what it changed.
 func (a *app) envModal(c *ui.Context, p design.Palette) {
 	// Closed by Escape or its backdrop is a cancel.
 	if a.envEdits != nil && !a.envOpen {
@@ -140,6 +140,14 @@ func (a *app) envEditor(c *ui.Context, p design.Palette) {
 		ui.Text(c, "变量可在 URL、参数、请求头与请求体里以 {{name}} 使用").
 			FontSize(design.FontSizeTiny).TextColor(p.TextMuted).Wrap()
 		a.prefixURLField(c, p)
+		ui.Column(c).FillWidth().Gap(2).Children(func() {
+			ui.Text(c, "公共请求头").FontSize(design.FontSizeTiny).TextColor(p.TextMuted)
+			ui.Text(c, "请求未设置同名请求头时使用这里的值").
+				FontSize(design.FontSizeTiny).TextColor(p.TextMuted)
+			ui.Scroll(c).FillWidth().Height(116).Children(func() {
+				a.envHeaders.View(c, p)
+			})
+		})
 		ui.Text(c, "环境变量").FontSize(design.FontSizeTiny).TextColor(p.TextMuted)
 		a.envVars.Flush()
 		// The variables scroll inside the editor: the window stays the height

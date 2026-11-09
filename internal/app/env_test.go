@@ -98,6 +98,18 @@ func TestEnvironmentManagerHasTwoColumns(t *testing.T) {
 	if _, ok := tt.Find("添加行"); ok {
 		t.Error("the manager still shows the button that adds a row")
 	}
+	if _, ok := tt.Find("公共请求头"); !ok {
+		t.Error("the manager does not show the environment's shared request headers")
+	}
+	headerKey, keyOK := tt.Find("键第 1 行")
+	headerValue, valueOK := tt.Find("值第 1 行")
+	if !keyOK || !valueOK {
+		t.Fatal("the shared header key and value inputs are missing")
+	}
+	if absFloat(headerKey.Y-headerValue.Y) > 4 {
+		t.Errorf("shared header key at y %.0f and value at y %.0f; want them on one line",
+			headerKey.Y, headerValue.Y)
+	}
 
 	// The cross of a variable reads in the danger color.
 	danger := a.palette().Danger
@@ -112,6 +124,32 @@ func TestEnvironmentManagerHasTwoColumns(t *testing.T) {
 	}
 	if !marked {
 		t.Error("the cross of a variable is not drawn in the danger color")
+	}
+}
+
+func TestEnvironmentManagerSavesSharedHeaders(t *testing.T) {
+	a := envApp(t)
+	tt := ui.NewTester(a.view, 1280, 640)
+
+	if err := tt.Click("键第 1 行"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Type("Cookie")
+	if err := tt.Click("值第 1 行"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Type("session=shared")
+	if err := tt.Click("保存环境"); err != nil {
+		t.Fatal(err)
+	}
+
+	env := a.store.Environment(a.envID)
+	if env == nil {
+		t.Fatal("no environment after saving")
+	}
+	if len(env.Headers) != 1 || env.Headers[0].Key != "Cookie" ||
+		env.Headers[0].Value != "session=shared" || !env.Headers[0].Enabled {
+		t.Errorf("headers %+v, want the enabled shared Cookie header", env.Headers)
 	}
 }
 

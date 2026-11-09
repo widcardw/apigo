@@ -1,14 +1,14 @@
 name: Package
 
-# 打 tag（如 v0.1.0）或手动触发时构建三平台产物：
+# 打 tag（如 v0.1.0、v0.1.3patch-1）或手动触发时构建三平台产物：
 #   Windows → apigo.exe（便携）与 "apigo-setup-<版本>-amd64.exe"（NSIS 安装包，
 #             mygo build 在 Windows 上自行下载 NSIS）
 #   macOS   → 通用包（arm64 + amd64）的 .app 与 .dmg（磁盘映像只能在 macOS 上做；
 #             mygo.json 未配置 macos.signingIdentity，产物未签名）
 #   Linux   → deb 与 tar.gz（amd64 / arm64 原生 runner 矩阵）
 #
-# 版本号来自 tag（去掉 v 前缀），经 task 的 APP_VERSION 变量由 tools/syncversion
-# 写入 mygo.json 后构建（mygo build 没有 -version 参数）。
+# 版本号来自 tag（去掉 v 前缀）；patch tag 使用基础 x.y.z 作为构建版本，
+# 经 task 的 APP_VERSION 变量由 tools/syncversion 写入 mygo.json 后构建。
 # 产物统一命名为 apigo-<版本>-<平台>-<架构>.<格式>，并附 .sha256 校验和。
 # 打 tag 触发时创建/更新 GitHub Release 并附加全部产物；手动触发只上传 workflow artifact。
 
@@ -54,8 +54,10 @@ jobs:
             version="${tag#v}"
             publish="true"
           fi
-          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::版本号 ${version} 不是 x.y.z 形式（tag 需要形如 v0.1.0）"
+          if [[ "${version}" =~ ^([0-9]+\.[0-9]+\.[0-9]+)(patch-[0-9]+)?$ ]]; then
+            version="${BASH_REMATCH[1]}"
+          else
+            echo "::error::版本号 ${version} 不是 x.y.z 或 x.y.zpatch-n 形式"
             exit 1
           fi
           {
