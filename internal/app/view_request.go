@@ -66,7 +66,8 @@ func (a *app) addressField(c *ui.Context, p design.Palette, t *tab, placeholder 
 				TextColor(p.TextMuted).SingleLine()
 			ui.Row(c).Width(addressPrefixGap)
 		}
-		input = ui.TextInputBase(c, &t.url).Grow(1).Font("monospace").Placeholder(placeholder)
+		input = ui.TextInputBase(c.Key("request-address"), &t.url).Grow(1).Font("monospace").
+			Placeholder(placeholder).Label("请求 URL")
 	})
 	// The whole field takes the focus ring, as its inner input cannot draw one
 	// that covers the prefix beside it.

@@ -115,6 +115,29 @@ func TestRequestLinePrefixFollowsTheAddress(t *testing.T) {
 	}
 }
 
+// TestRequestAddressKeepsFocusWhenBaseURLPrefixAppears checks the address
+// input keeps its identity as the prefix appears before it.
+func TestRequestAddressKeepsFocusWhenBaseURLPrefixAppears(t *testing.T) {
+	a := testApp(t)
+	a.current().url = ""
+	a.store.Environments[0].Vars = []savedRow{
+		{Enabled: true, Key: store.BaseURLVariable, Value: "http://localhost:8080"},
+	}
+	tt := ui.NewTester(a.view, 1280, 800)
+
+	if err := tt.Click("请求 URL"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Type("/")
+
+	if got := a.current().url; got != "/" {
+		t.Errorf("URL %q after typing slash, want /", got)
+	}
+	if !tt.Focused("请求 URL") {
+		t.Error("address field lost focus when the base URL prefix appeared")
+	}
+}
+
 // TestSocketConnectsUnderBaseURL checks a socket address that starts with a
 // slash opens on the baseurl of the environment, as a request does.
 func TestSocketConnectsUnderBaseURL(t *testing.T) {
